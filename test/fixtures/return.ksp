@@ -1,0 +1,4 @@
+<%
+context.body = await Promise.resolve('returned')
+return
+%>
