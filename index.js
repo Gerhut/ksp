@@ -1,49 +1,52 @@
-const fs = require('fs')
-const path = require('path')
-const util = require('util')
+const { promises: { stat } } = require('fs')
+const { basename, extname, join, normalize, resolve } = require('path')
 
 const debug = require('debug')('ksp')
 
 const render = require('./lib/render')
-const send = require('./lib/send')
 
-const stat = util.promisify(fs.stat)
-
-module.exports = ({
-  root: pageDirectory,
-  index: indexFilename = 'index.ksp'
-} = {}) => {
+/**
+ * @param {object} options
+ * @param {string} [options.root='.']
+ * @param {string} [options.index='index.ksp']
+ * @returns {import('koa').Middleware}
+ */
+module.exports = ({ root = '.', index = 'index.ksp' } = {}) => {
   // Normalize arguments
-  pageDirectory = path.resolve(pageDirectory)
-  indexFilename = path.basename(indexFilename)
+  root = resolve(root)
+  index = basename(index)
 
-  debug('root: %s', pageDirectory)
-  debug('index %s', indexFilename)
+  debug('root: %s', root)
+  debug('index %s', index)
 
-  return async context => {
+  const renderFunction = render({ root })
+
+  return async (context, next) => {
     try {
-      let filename = path.normalize(context.path)
-      filename = path.join(pageDirectory, filename)
+      let filename = normalize(context.path)
+      filename = join(root, filename)
+
       let stats = await stat(filename)
-      while (stats.isDirectory()) {
-        debug('%s is directory, appending %s', filename, indexFilename)
-        filename = path.join(filename, indexFilename)
+      if (stats.isDirectory()) {
+        debug('%s is directory, appending %s', filename, index)
+        filename = join(filename, index)
         stats = await stat(filename)
       }
 
-      const extension = path.extname(filename)
+      const extension = extname(filename)
       if (extension === '.ksp') {
         debug('render %s', filename)
-        return await render(context, filename)
-      } else {
-        debug('send %s', filename)
-        return await send(context, filename)
+        return await renderFunction(context, filename)
       }
     } catch (error) {
       debug('Error %o', error)
-      context.assert(error.code !== 'ENOENT', 404)
-      context.assert(error.code !== 'EPERM', 403)
+      const { code } = error
+      context.assert(code !== 'EACCES', 403)
+      context.assert(code !== 'EISDIR', 403)
+      context.assert(code !== 'ENOENT', 404)
+      context.assert(code !== 'EMFILE', 503)
       throw error
     }
+    return next()
   }
 }

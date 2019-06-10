@@ -28,6 +28,7 @@ it('should 404', async () => {
     await axiosist(app.callback()).get('/hello2.ksp')
     should.fail()
   } catch (error) {
+    console.log(error)
     should(error.response.status).be.equal(404)
   }
 })
@@ -36,13 +37,6 @@ it('should index', async () => {
   const app = new KspApp({ root: path.resolve(__dirname, 'fixtures') })
   const response = await axiosist(app.callback()).get('/')
   should(response.data).be.startWith('Hello index')
-})
-
-it('should serve static file', async () => {
-  const app = new KspApp({ root: path.resolve(__dirname, 'fixtures') })
-  const response = await axiosist(app.callback()).get('/here.css')
-  should(response.headers['content-type']).be.startWith('text/css')
-  should(response.data).be.startWith('a { color: red }')
 })
 
 it('should support returned template', async () => {
