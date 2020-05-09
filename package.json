@@ -33,7 +33,7 @@
     "@types/ejs": "^3.0.3",
     "@types/koa": "^2.0.48",
     "@types/mocha": "^7.0.2",
-    "@types/node": "^10.14.0",
+    "@types/node": "^13.13.5",
     "axiosist": "^0.9.0",
     "mocha": "^7.1.2",
     "nyc": "^15.0.1",
